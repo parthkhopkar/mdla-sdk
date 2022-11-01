@@ -9,12 +9,12 @@ from numpy.ctypeslib import ndpointer
 from .onnx_util import onnx_concat
 from .onnx_optim import onnx_optim
 
-try:
-    f = CDLL("./libmicrondla.so")
-except:
-    f = CDLL("libmicrondla.so")
+# try:
+#     f = CDLL("./libmicrondla.so")
+# except:
+#     f = CDLL("libmicrondla.so")
 
-libc = CDLL("libc.so.6")
+# libc = CDLL("libc.so.6")
 
 curversion = '2022.1.0'
 
@@ -268,6 +268,22 @@ class MDLA:
     #        want to change some input dimension
     # samples: a list of images in numpy float32 format used to choose the proper quantization for variable-fixed-point
     def Compile(self, modelpath, inshapes = None, samples = None, MDLA = None, outfile = None, simplify=False):
+        """Compiles a ONNX/NNEF network and produce .bin file with everything that is needed to execute
+
+        Args:
+            modelpath (_type_): path to a model file in ONNX format
+            inshapes (_type_, optional): it is an optional string with shape information in the form of size0xsize1x...sizeN. In case of multiple inputs, shapes are semi-colon separated. This parameter is normally inferred from the model file, it can be overridden in case we want to change some input dimension. Defaults to None.
+            samples (_type_, optional): a list of images in numpy float32 format used to choose the proper quantization for variable-fixed-point. Defaults to None.
+            MDLA (_type_, optional): MDLA object to link together so that models can be load into memory together. Defaults to None.
+            outfile (_type_, optional): path to a file where a model in Micron DLA ready format will be saved.. Defaults to None.
+            simplify (bool, optional): whether to use onnx-simplifier on model file before inference. Defaults to False.
+
+        Raises:
+            Exception: _description_
+
+        Returns:
+            _type_: List of the output nodes names returned by the network
+        """
         if isinstance(modelpath, list) and all(isinstance(elem, str) for elem in modelpath):
             onnx_concat(modelpath, "tmp.onnx")
             modelpath = 'tmp.onnx'
@@ -318,6 +334,15 @@ class MDLA:
     # infile: model binary file path
     # cmem: another MDLA obj to be combined with this MDLA run
     def Init(self, infile, MDLA = None):
+        """Loads a bitfile on an FPGA if necessary and prepares to run Micron DLA hardware.
+
+        Args:
+            infile (_type_): model binary file path. .bin file created by Compile.
+            MDLA (_type_, optional): another MDLA obj to be combined with this MDLA run. Defaults to None.
+
+        Raises:
+            Exception: _description_
+        """
         noutputs = c_uint()
         noutdims = pointer(c_uint())
         outshapes = pointer(pointer(c_ulonglong()))
@@ -340,6 +365,18 @@ class MDLA:
     # value: to be assigned to the flag
     # currently available options are listed in Codes.md
     def SetFlag(self, name, value=''):
+        """Set flags that change the behaviour of the API.
+
+        .. note::
+            See https://github.com/micronDLA/SDK/blob/master/docs/Codes.md for all available options for flags.
+
+        Args:
+            name (_type_): name of the flag to be set
+            value (str, optional): value to set the flag as a numpy string. Defaults to ''.
+
+        Raises:
+            Exception: _description_
+        """
         if isinstance(name, dict):
             for k in name.keys():
                 self.SetFlag(k, name[k])
@@ -355,6 +392,17 @@ class MDLA:
     # name: string with the info name that is going to be returned
     # currently available options are listed in Codes.md
     def GetInfo(self, name):
+        """Gets information of the SDK options.
+
+        Args:
+            name (_type_): string with the info name that is going to be returned
+
+        Raises:
+            Exception: _description_
+
+        Returns:
+            _type_: _description_
+        """
         return_val = create_string_buffer(10000)
         rc = self.ie_getinfo(self.handle, bytes(name, 'ascii'), byref(return_val), 10000)
         if rc == 0:
@@ -420,6 +468,22 @@ class MDLA:
     #Returns:
     # result: model's output tensor
     def Run(self, images):
+        """Runs a single inference on Micron DLA hardware.
+
+        .. warning::
+            Run function does not use Double Buffer mode which is the recommended
+            mode to get the best performance. See https://github.com/micronDLA/SDK#6-tutorial---putinput-and-getresult
+            for details
+
+        Args:
+            images (_type_): input data as a [list of] numpy array of type float32
+
+        Raises:
+            Exception: _description_
+
+        Returns:
+            _type_: output tensor or list of output tensors of the model
+        """
         imgs, sizes, nimgs, keepalive = self.inparams(images)
         results, r, rs, nresults = self.outparams()
         rc = self.ie_run(self.handle, imgs, sizes, nimgs, r, rs, nresults)
@@ -433,6 +497,18 @@ class MDLA:
     #Return:
     # Error or no error.
     def PutInput(self, images, userobj):
+        """Put an input into a buffer and start Micron DLA hardware.
+
+        Args:
+            images (_type_): input data as a [list of] numpy array of type float32
+            userobj (_type_): user defined object to keep track of the given input
+
+        Raises:
+            Exception: _description_
+
+        Returns:
+            _type_: Error or no error
+        """
         userobj = py_object(userobj)
         key = c_void_p(addressof(userobj))
         self.userobjs[key.value] = userobj
@@ -451,6 +527,14 @@ class MDLA:
     #Return:
     # result: model's output tensor
     def GetResult(self):
+        """Get an output from a buffer. If the blocking flag was set then it will wait for Micron DLA hardware.
+
+        Raises:
+            Exception: _description_
+
+        Returns:
+            _type_: Output tensor or list of output tensors and the ``userobj`` that was associated with this buffer in the PutInput function call.
+        """
         userobj = c_void_p()
         results, r, rs, nresults = self.outparams()
         rc = self.ie_getresult(self.handle, r, rs, nresults, byref(userobj))
@@ -467,6 +551,17 @@ class MDLA:
     #Return:
     # result: models output tensor
     def Run_sw(self, images):
+        """Runs a single inference on the Micron DLA hardware simulator.
+
+        Args:
+            images (_type_): input data as a [list of] numpy array of type float32
+
+        Raises:
+            Exception: _description_
+
+        Returns:
+            _type_: output tensor or list of output tensors of the model
+        """
         imgs, sizes, nimgs, keepalive = self.inparams(images)
         results, r, rs, nresults = self.outparams()
         rc = self.ie_run_sw(self.handle, imgs, sizes, nimgs, r, rs, nresults)
@@ -479,6 +574,17 @@ class MDLA:
     #Return:
     # result: models output tensor as a preallocated numpy array of type float32
     def Run_th(self, images):
+        """Runs a single inference using thnets.
+
+        Args:
+            images (_type_): input data as a [list of] numpy array of type float32
+
+        Raises:
+            Exception: _description_
+
+        Returns:
+            _type_: output tensor or list of output tensors of the model
+        """
         imgs, sizes, nimgs, keepalive = self.inparams(images)
         results, r, rs, nresults = self.outparams()
         rc = self.ie_run_thnets(self.handle, imgs, sizes, nimgs, r, rs, nresults)

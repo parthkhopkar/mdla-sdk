@@ -129,7 +129,7 @@ For example
     $ ./compile ../../../model/alexnet.onnx -i 1x3x224x224 -o instructions.bin
 
 Where ``-i`` is the input sizes: width x height x channels.
-After creating the ``instructions.bin`, you can run the network on the DLA with this command, which will find the FPGA card that was loaded with the DLA:
+After creating the ``instructions.bin``, you can run the network on the DLA with this command, which will find the FPGA card that was loaded with the DLA:
 
 .. code-block:: console
     

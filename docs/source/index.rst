@@ -10,15 +10,28 @@ Micron's Deep Learning Accelerator platform enables inference tasks to be carrie
 
 .. toctree::
    :maxdepth: 2
-   :caption: Contents:
+   :caption: User Documentation
 
-   dla_setup
-   installation
-   deep_learning
-   getting_started_mdla
-   tutorials
-   supported_models_layers
-   faq
+   user_docs/dla_setup
+   user_docs/installation
+   user_docs/deep_learning
+   user_docs/getting_started_mdla
+
+.. toctree::
+   :maxdepth: 2
+   :caption: Tutorials
+   
+   tutorials/multiple_fpgas_and_clusters
+   tutorials/putinput_getresult
+   tutorials/vfp
+
+.. toctree::
+   :maxdepth: 1
+   :caption: API Reference
+
+   api/python_api
+   api/c_api
+   api/debug_options
 
 Indices and tables
 ^^^^^^^^^^^^^^^^^^
