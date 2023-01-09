@@ -2,7 +2,7 @@ Micron DLA set-up steps
 =======================
 
 1. Obtain necessary hardware: This SDK assumes that you are working on a desktop computer with Micron FPGA boards. For example: AC-511 and EX-750.
-2. Install pico-computing tools and Micron DLA SDK. Check section [1.](#1-installation)
+2. Install pico-computing tools and Micron DLA SDK. Check section :doc:`installation`
 3. Run a sample example. Check sections [3.](#3-getting-started-inference-on-microndla-hardware) and [4.](#4-getting-started-inference-on-microndla-hardware-with-c)
 4. Create your own application
 
